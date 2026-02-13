@@ -1,0 +1,30 @@
+name: Daily Model Training
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'  # Runs once a day at 2 AM UTC
+
+jobs:
+  train_model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Train & Register Model
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+          DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
+          DAGSHUB_REPO: ${{ secrets.DAGSHUB_REPO }}
+        run: |
+          python training/train_model.py
