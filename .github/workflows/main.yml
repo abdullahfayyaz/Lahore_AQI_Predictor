@@ -41,7 +41,7 @@ jobs:
           OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
           PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
         run: |
-          python feature_pipeline.py
+          python features/feature_pipeline.py
 
   preprocessing:
     needs: feature_pipeline
@@ -54,7 +54,7 @@ jobs:
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
         run: |
-          python preprocessing.py
+          python features/preprocessing.py
 
   model_training:
     if: github.event_name == 'schedule' && github.event.schedule == '0 2 * * *' || github.event_name == 'workflow_dispatch'
@@ -74,4 +74,4 @@ jobs:
           DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
           DAGSHUB_REPO: ${{ secrets.DAGSHUB_REPO }}
         run: |
-          python train_model.py
+          python training/train_model.py
