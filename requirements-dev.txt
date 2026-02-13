@@ -4,7 +4,7 @@ requests==2.32.5
 mlflow==3.9.0
 mlflow-skinny==3.9.0
 mlflow-tracing==3.9.0
-scikit-learn==1.5.1
+scikit-learn==1.8.0
 xgboost==3.2.0
 dagshub==0.6.5
 dagshub-annotation-converter==0.1.16
