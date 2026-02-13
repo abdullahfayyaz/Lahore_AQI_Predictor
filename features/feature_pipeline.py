@@ -6,6 +6,7 @@ import certifi
 from datetime import datetime
 from dotenv import load_dotenv
 import pymongo
+import pytz
 
 # --- LOAD ENVIRONMENT VARIABLES ---
 load_dotenv()
@@ -67,7 +68,8 @@ def process_data(poll_json, weather_json):
         clouds = weather_json['clouds']
         
         timestamp = poll_list['dt']
-        date_obj = datetime.fromtimestamp(timestamp)
+        lahore_tz = pytz.timezone('Asia/Karachi')
+        date_obj = datetime.fromtimestamp(timestamp, pytz.utc).astimezone(lahore_tz)
         
         # Construct the document
         record = {
