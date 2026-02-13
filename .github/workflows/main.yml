@@ -1,14 +1,15 @@
 name: AQI Pipeline
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # manual trigger
   schedule:
-    - cron: '0 * * * *'
+    - cron: '0 * * * *'   # every hour
+    - cron: '0 2 * * *'   # daily at 2 AM for training
 
 jobs:
   run_pipeline:
     runs-on: ubuntu-latest
-
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' && github.event.schedule == '0 * * * *'
     steps:
       - uses: actions/checkout@v3
 
@@ -20,12 +21,32 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
-      - name: Run Full Pipeline
+      - name: Run Feature + Preprocessing
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
           OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
-          DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
-          DAGSHUB_REPO: ${{ secrets.DAGSHUB_REPO }}
         run: |
           python features/feature_pipeline.py
           python features/preprocessing.py
+
+  model_training:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' && github.event.schedule == '0 2 * * *'
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run Training
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
+          DAGSHUB_REPO: ${{ secrets.DAGSHUB_REPO }}
+        run: |
+          python training/train_model.py
