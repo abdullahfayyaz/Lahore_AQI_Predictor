@@ -9,11 +9,26 @@ import dagshub
 load_dotenv()
 
 # Initialize DagsHub MLflow
-dagshub.init(
-    repo_owner=os.getenv("DAGSHUB_USERNAME"),
-    repo_name=os.getenv("DAGSHUB_REPO"),
-    mlflow=True
-)
+# dagshub.init(
+#     repo_owner=os.getenv("DAGSHUB_USERNAME"),
+#     repo_name=os.getenv("DAGSHUB_REPO"),
+#     mlflow=True
+# )
+DAGSHUB_USERNAME = os.getenv("DAGSHUB_USERNAME")
+DAGSHUB_REPO = os.getenv("DAGSHUB_REPO")
+DAGSHUB_TOKEN = os.getenv("DAGSHUB_TOKEN")
+
+# --- AUTHENTICATION CHECK ---
+if not DAGSHUB_TOKEN or not DAGSHUB_USERNAME:
+    raise EnvironmentError("❌ Critical Error: DAGSHUB_TOKEN or DAGSHUB_USERNAME is missing. Check your GitHub Secrets!")
+
+# --- CONNECT SILENTLY (No Browser) ---
+print(f"🔌 Connecting to DagsHub: {DAGSHUB_REPO}...")
+mlflow.set_tracking_uri(f"https://dagshub.com/{DAGSHUB_USERNAME}/{DAGSHUB_REPO}.mlflow")
+
+# Set credentials explicitly so MLflow doesn't ask for them
+os.environ["MLFLOW_TRACKING_USERNAME"] = DAGSHUB_USERNAME
+os.environ["MLFLOW_TRACKING_PASSWORD"] = DAGSHUB_TOKEN
 
 MLFLOW_EXP_NAME = "Lahore_AQI_Experiment"
 mlflow.set_experiment(MLFLOW_EXP_NAME)

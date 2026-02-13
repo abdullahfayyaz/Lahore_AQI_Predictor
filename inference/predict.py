@@ -58,46 +58,65 @@ mlflow.set_tracking_uri(
 # -------------------------------
 def load_model_globally():
     """
-    Load the model with the lowest MAE across all registered models.
-    If multiple versions have the same MAE, the latest version is chosen.
+    Scans ALL versions of registered models to find the absolute best MAE in history.
     """
     global LOADED_MODEL, LOADED_MODEL_NAME
 
     if LOADED_MODEL is not None:
         return LOADED_MODEL, LOADED_MODEL_NAME
 
-    print("⏳ Loading best model from DagsHub...")
+    print("⏳ Scanning history for best model on DagsHub...")
 
     try:
         client = mlflow.tracking.MlflowClient()
-        model_types = ["XGBoost", "RandomForest", "RidgeRegression", "NeuralNetwork"]  # list your models
-        best_model = None
+        # Ensure these names match exactly what you used in registry.py
+        # If you registered everything under one name like "Lahore_AQI_Model", just use that one string in the list.
+        model_names = ["XGBoost", "RandomForest", "RidgeRegression", "NeuralNetwork"] 
+        
+        best_model_name = None
         best_mae = float("inf")
-        best_version_info = None
+        best_version_obj = None
 
-        for model_type in model_types:
-            registered_name = model_type.replace(" ", "_")
+        for name in model_names:
+            registered_name = name.replace(" ", "_") # e.g. "RandomForest"
+            
             try:
-                versions = client.get_latest_versions(registered_name)
+                # FIX: Use search_model_versions to get ALL history, not just the latest
+                all_versions = client.search_model_versions(f"name='{registered_name}'")
             except:
-                versions = []
+                continue
 
-            for v in versions:
-                run = client.get_run(v.run_id)
-                mae = float(run.data.metrics.get("mae", float("inf")))
-                if mae < best_mae or (mae == best_mae and int(v.version) > int(best_version_info.version if best_version_info else 0)):
-                    best_mae = mae
-                    best_model = registered_name
-                    best_version_info = v
+            for v in all_versions:
+                try:
+                    # Get the specific run for this version to check metrics
+                    run = client.get_run(v.run_id)
+                    mae = float(run.data.metrics.get("mae", float("inf")))
+                    
+                    # Logic: Keep if MAE is lower. If tie, keep the newer version.
+                    if mae < best_mae:
+                        best_mae = mae
+                        best_model_name = registered_name
+                        best_version_obj = v
+                    elif mae == best_mae:
+                        # Tie-breaker: prefer newer version
+                        if best_version_obj and int(v.version) > int(best_version_obj.version):
+                            best_version_obj = v
+                            best_model_name = registered_name
+                except Exception as e:
+                    print(f"⚠️ Could not read metrics for {registered_name} v{v.version}: {e}")
+                    continue
 
-        if not best_version_info:
-            print("❌ No model versions found!")
+        if not best_version_obj:
+            print("❌ No valid models found in registry.")
             return None, "No Model"
 
-        model_uri = f"models:/{best_model}/{best_version_info.version}"
+        # Load the winner
+        print(f"🏆 Best Model Found: {best_model_name} v{best_version_obj.version} (MAE: {best_mae:.2f})")
+        model_uri = f"models:/{best_model_name}/{best_version_obj.version}"
+        
         LOADED_MODEL = mlflow.pyfunc.load_model(model_uri)
-        LOADED_MODEL_NAME = f"{best_model} v{best_version_info.version} | MAE: {best_mae:.2f}"
-        print(f"✅ Loaded {LOADED_MODEL_NAME}")
+        LOADED_MODEL_NAME = f"{best_model_name} v{best_version_obj.version}"
+        
         return LOADED_MODEL, LOADED_MODEL_NAME
 
     except Exception as e:
