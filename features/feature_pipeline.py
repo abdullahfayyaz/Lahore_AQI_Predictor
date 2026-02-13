@@ -2,6 +2,7 @@ import os
 import sys
 import requests
 import pandas as pd
+import certifi
 from datetime import datetime
 from dotenv import load_dotenv
 import pymongo
@@ -114,7 +115,7 @@ def save_to_mongodb(record, uri, db_name="aqi_db", collection_name="lahore_readi
 
     try:
         print("Connecting to MongoDB...")
-        client = pymongo.MongoClient(uri)
+        client = pymongo.MongoClient(uri, tlsCAFile=certifi.where())
         db = client[db_name]
         collection = db[collection_name]
         

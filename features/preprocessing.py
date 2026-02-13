@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 import pymongo
+import certifi
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -53,7 +54,7 @@ def calculate_aqi_us(pm25, pm10):
 
 def load_data():
     print(f"⏳ Loading raw data from '{SOURCE_COLLECTION}'...")
-    client = pymongo.MongoClient(MONGO_URI)
+    client = pymongo.MongoClient(MONGO_URI, tlsCAFile=certifi.where())
     db = client[DB_NAME]
     collection = db[SOURCE_COLLECTION]
     
