@@ -46,6 +46,7 @@ jobs:
       - name: Run Training
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
+          DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
           DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
           DAGSHUB_REPO: ${{ secrets.DAGSHUB_REPO }}
         run: |
