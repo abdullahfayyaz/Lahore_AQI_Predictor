@@ -176,14 +176,40 @@ def make_prediction():
     if not forecasts:
         return {"error": "Weather Forecast API failed"}
 
-    lag_1 = get_past_aqi(1)
-    lag_6 = get_past_aqi(6)
-    lag_24 = get_past_aqi(24)
-    roll_mean = get_rolling_mean()
+    # 1. Fetch initial real data from DB
+    current_lag_1 = get_past_aqi(1)
+    current_lag_6 = get_past_aqi(6)
+    current_lag_24 = get_past_aqi(24)
+    current_roll_mean = get_rolling_mean()
 
     predictions = []
+    
+    # Track the previous prediction to use as "history" for the next day
+    last_pred_aqi = None 
+    
+    # Track the running short-term lag (starts with real data)
+    # This represents the "fading memory" of the current situation
+    running_lag_1 = current_lag_1
+    running_lag_6 = current_lag_6
 
     for f in forecasts:
+        # 2. Dynamic Lag Logic (Weighted Decay)
+        if last_pred_aqi is None:
+            # First forecast (Today): Use actual DB data
+            used_lag_1 = running_lag_1
+            used_lag_6 = running_lag_6
+            used_lag_24 = current_lag_24
+        else:
+            # Future forecasts (Tomorrow+): 
+            
+            # used_lag_24 is strictly the forecast from 24 hours ago (our previous prediction)
+            used_lag_24 = last_pred_aqi
+            
+            # used_lag_1 is a mix: 80% new trend (last_pred), 20% old memory (running_lag)
+            # This creates variation between lag_1 and lag_24, preventing flat outputs
+            used_lag_1 = (last_pred_aqi * 0.8) + (running_lag_1 * 0.2)
+            used_lag_6 = (last_pred_aqi * 0.8) + (running_lag_6 * 0.2)
+
         data = {
             'temperature': f['temp'],
             'humidity': f['humidity'],
@@ -191,10 +217,10 @@ def make_prediction():
             'wind_speed': f['wind_speed'],
             'wind_direction': f['wind_deg'],
             'clouds': f['clouds'],
-            'aqi_lag_1': lag_1,
-            'aqi_lag_6': lag_6,
-            'aqi_lag_24': lag_24,
-            'aqi_roll_mean_24': roll_mean,
+            'aqi_lag_1': used_lag_1,       # Updates dynamically with decay
+            'aqi_lag_6': used_lag_6,    # Kept static
+            'aqi_lag_24': used_lag_24,     # Updates dynamically
+            'aqi_roll_mean_24': current_roll_mean,
             'hour': f['dt'].hour,
             'day': f['dt'].day,
             'month': f['dt'].month,
@@ -210,8 +236,18 @@ def make_prediction():
         df = pd.DataFrame([data])
         df = df[TRAINING_FEATURES]
 
+        # 3. Predict
         pred_val = float(model.predict(df)[0])
+        
+        # Save this prediction for the next loop's lag_24
+        last_pred_aqi = pred_val
+        
+        # Update the running lag "memory" for the next loop's lag_1 
+        # (It gradually forgets the old reality and adopts the new prediction)
+        running_lag_1 = (running_lag_1 * 0.5) + (pred_val * 0.5)
+        running_lag_6 = (running_lag_6 * 0.5) + (pred_val * 0.5)
 
+        # Description Logic
         if pred_val > 300: desc = "Hazardous"
         elif pred_val > 200: desc = "Very Unhealthy"
         elif pred_val > 150: desc = "Unhealthy"
@@ -222,8 +258,8 @@ def make_prediction():
         predictions.append({
             "date": f['dt'].strftime("%a, %d %b"),
             "aqi": int(pred_val),
-            "temp": f['temp'],
-            "humidity": f['humidity'],
+            "temp": int(f['temp']),
+            "humidity": int(f['humidity']),
             "desc": desc
         })
 
