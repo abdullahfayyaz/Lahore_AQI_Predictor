@@ -74,16 +74,48 @@ def get_aqi_status(aqi):
 
 def get_recommendations(aqi):
     recs = []
-    if aqi <= 100:
-        recs.append("✅ It's a great day for outdoor sports!")
-        recs.append("🏠 Open windows to let fresh air in.")
+    # 1. Good (0-50)
+    if aqi <= 50:
+        recs.append("✅ Air quality is satisfactory")
+        recs.append("🏃‍♂️ Enjoy your usual outdoor activities")
+        recs.append("🏠 Open windows to bring in fresh air")
+
+    # 2. Moderate (51-100)
+    elif aqi <= 100:
+        recs.append("⚠️ Sensitive groups should reduce outdoor exercise")
+        recs.append("😷 Sensitive groups: Wear a mask if experiencing symptoms")
+        recs.append("🏠 Close windows to avoid outdoor pollution")
+        recs.append("🏃‍♂️ General public: Enjoy outdoor activities")
+
+    # 3. Unhealthy for Sensitive Groups (101-150)
     elif aqi <= 150:
-        recs.append("⚠️ Sensitive groups should wear masks.")
-        recs.append("🏃‍♂️ Reduce prolonged outdoor exertion.")
+        recs.append("⛔ Sensitive groups: Avoid strenuous outdoor activity")
+        recs.append("😷 Sensitive groups: Wear a mask outdoors")
+        recs.append("🏃‍♂️ General public: Reduce prolonged outdoor exertion")
+        recs.append("💨 Run air purifier on Low/Medium")
+        recs.append("🏠 Close windows")
+
+    # 4. Unhealthy (151-200)
+    elif aqi <= 200:
+        recs.append("⛔ Avoid prolonged outdoor exertion")
+        recs.append("😷 Wear a mask outdoors")
+        recs.append("🏃‍♂️ Move exercise indoors")
+        recs.append("💨 Run air purifier on High")
+        recs.append("🏠 Keep windows and doors closed")
+
+    # 5. Very Unhealthy (201-300)
+    elif aqi <= 300:
+        recs.append("⛔ Avoid all outdoor exertion")
+        recs.append("😷 Wear a mask if you must go out")
+        recs.append("👶 Children & Elderly should stay indoors")
+        recs.append("💨 Run air purifier on Max")
+
+    # 6. Hazardous (301+)
     else:
-        recs.append("⛔ Avoid ALL outdoor exercise.")
-        recs.append("😷 Wear an N95 mask if you must go out.")
-        recs.append("💨 Run your air purifier on High.")
+        recs.append("☠️ EMERGENCY CONDITIONS: Stay indoors")
+        recs.append("⛔ Avoid all physical activity outdoors")
+        recs.append("😷 Wear an N95/P100 mask if strictly necessary")
+        recs.append("💨 Seal windows/doors and run air purifier")
     return recs
 
 # --- VISUALIZATION FUNCTIONS ---
@@ -123,13 +155,26 @@ tab_live, tab_analysis, tab_about = st.tabs(["📡 Live Dashboard", "📊 Deep A
 # TAB 1: LIVE DASHBOARD
 # =========================================
 with tab_live:
-    data = get_live_prediction()
+    # 1. Header & Refresh Button Layout
+    col_head, col_btn = st.columns([6, 1])
+    
+    with col_head:
+        st.subheader("Current Air Quality Status")
+        
+    with col_btn:
+        # pressing this button triggers a script rerun, fetching new data automatically
+        if st.button("🔄 Refresh", help="Fetch latest prediction from API"):
+            st.rerun()
+
+    # 2. Fetch Data
+    with st.spinner('Fetching latest AI prediction...'):
+        data = get_live_prediction()
     
     if data and "forecast" in data:
         current = data["forecast"][0]
         forecasts = data["forecast"][1:]
         
-        # 1. Top Metrics Row
+        # 3. Top Metrics Row
         col1, col2, col3, col4 = st.columns(4)
         status, color, icon = get_aqi_status(current['aqi'])
         
@@ -140,36 +185,52 @@ with tab_live:
         with col3:
             st.metric("Humidity", f"{current['humidity']}%")
         with col4:
-            st.markdown(f"<div style='background-color:{color}; color:white; padding:10px; border-radius:5px; text-align:center; font-weight:bold;'>{status}</div>", unsafe_allow_html=True)
+            st.markdown(f"""
+                <div style='background-color:{color}; color:white; padding:10px; 
+                border-radius:5px; text-align:center; font-weight:bold; 
+                margin-top: 5px; box-shadow: 0px 2px 5px rgba(0,0,0,0.2);'>
+                {icon} {status}
+                </div>
+                """, unsafe_allow_html=True)
 
-        # 2. Gauge & Recommendations
-        c_gauge, c_recs = st.columns([1, 1])
+        # 4. Gauge & Recommendations
+        st.divider()
+        c_gauge, c_recs = st.columns([1.2, 1]) # Gauge gets slightly more space
+        
         with c_gauge:
             st.plotly_chart(create_gauge(current['aqi']), use_container_width=True)
+            
         with c_recs:
             st.subheader("💡 Health Actions")
             for rec in get_recommendations(current['aqi']):
                 st.info(rec)
 
-        # 3. Forecast Cards
+        # 5. Forecast Cards
         st.divider()
         st.subheader("📅 3-Day Forecast")
-        f_cols = st.columns(3)
-        for i, f in enumerate(forecasts[:3]):
-            f_status, f_color, f_icon = get_aqi_status(f['aqi'])
-            with f_cols[i]:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <h4>{f['date']}</h4>
-                    <h1 style="color:{f_color}">{f['aqi']}</h1>
-                    <p>{f_icon} {f_status}</p>
-                    <hr>
-                    <p>🌡️ {f['temp']}°C | 💧 {f['humidity']}%</p>
-                </div>
-                """, unsafe_allow_html=True)
+        
+        # Check if we have forecasts
+        if forecasts:
+            f_cols = st.columns(3)
+            for i, f in enumerate(forecasts[:3]):
+                f_status, f_color, f_icon = get_aqi_status(f['aqi'])
+                with f_cols[i]:
+                    st.markdown(f"""
+                    <div class="metric-card" style="border-top: 5px solid {f_color};">
+                        <h4>{f['date']}</h4>
+                        <h1 style="color:{f_color}; font-size: 3rem; margin:0;">{f['aqi']}</h1>
+                        <p style="font-weight:bold; font-size: 1.1rem;">{f_icon} {f_status}</p>
+                        <hr style="margin: 10px 0;">
+                        <p>🌡️ {f['temp']}°C &nbsp;|&nbsp; 💧 {f['humidity']}%</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+        else:
+            st.warning("Insufficient forecast data available.")
                 
     else:
-        st.error("⚠️ API is offline. Please run `uvicorn app.main:app --reload`.")
+        st.error("⚠️ API is offline or returning empty data. Please check your backend.")
+        if st.button("Retry Connection"):
+            st.rerun()
 
 # =========================================
 # TAB 2: DEEP ANALYSIS (EDA)
