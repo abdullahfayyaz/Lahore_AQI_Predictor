@@ -89,11 +89,10 @@ def get_recommendations(aqi):
 
     # 3. Unhealthy for Sensitive Groups (101-150)
     elif aqi <= 150:
-        recs.append("⛔ Sensitive groups: Avoid strenuous outdoor activity")
-        recs.append("😷 Sensitive groups: Wear a mask outdoors")
-        recs.append("🏃‍♂️ General public: Reduce prolonged outdoor exertion")
-        recs.append("💨 Run air purifier on Low/Medium")
-        recs.append("🏠 Close windows")
+        recs.append("🏃‍♂️ Reduce outdoor exercise")
+        recs.append("🏠 Close your windows to avoid dirty outdoor air")
+        recs.append("😷 Sensitive groups should wear a mask outdoors")
+        recs.append("💨 Run an air purifier")
 
     # 4. Unhealthy (151-200)
     elif aqi <= 200:
