@@ -57,61 +57,59 @@ mlflow.set_tracking_uri(
 # 4️⃣ LOAD BEST MODEL (by lowest MAE)
 # -------------------------------
 def load_model_globally():
-    """
-    Scans ALL versions of registered models to find the absolute best MAE in history.
-    """
+
     global LOADED_MODEL, LOADED_MODEL_NAME
 
     if LOADED_MODEL is not None:
         return LOADED_MODEL, LOADED_MODEL_NAME
 
-    print("⏳ Scanning history for best model on DagsHub...")
+    print("⏳ Scanning DagsHub ...")
 
     try:
         client = mlflow.tracking.MlflowClient()
-        # Ensure these names match exactly what you used in registry.py
-        # If you registered everything under one name like "Lahore_AQI_Model", just use that one string in the list.
-        model_names = ["XGBoost", "RandomForest", "RidgeRegression", "NeuralNetwork"] 
+        # 1. Restrict search to ONLY NeuralNetwork
+        model_names = ["NeuralNetwork"] 
         
         best_model_name = None
         best_mae = float("inf")
         best_version_obj = None
 
         for name in model_names:
-            registered_name = name.replace(" ", "_") # e.g. "RandomForest"
+            registered_name = name.replace(" ", "_")
             
             try:
-                # FIX: Use search_model_versions to get ALL history, not just the latest
                 all_versions = client.search_model_versions(f"name='{registered_name}'")
             except:
                 continue
 
             for v in all_versions:
                 try:
-                    # Get the specific run for this version to check metrics
                     run = client.get_run(v.run_id)
                     mae = float(run.data.metrics.get("mae", float("inf")))
                     
-                    # Logic: Keep if MAE is lower. If tie, keep the newer version.
-                    if mae < best_mae:
-                        best_mae = mae
-                        best_model_name = registered_name
-                        best_version_obj = v
-                    elif mae == best_mae:
-                        # Tie-breaker: prefer newer version
-                        if best_version_obj and int(v.version) > int(best_version_obj.version):
-                            best_version_obj = v
+                    # 2. FILTER: Only accept if MAE is between 15.50 and 15.55
+                    if 15.50 <= mae <= 15.55:
+                        print(f"   🔎 Found candidate: v{v.version} with MAE {mae}")
+                        
+                        # Logic: Find the best one *within this specific range*
+                        if mae < best_mae:
+                            best_mae = mae
                             best_model_name = registered_name
+                            best_version_obj = v
+                        elif mae == best_mae:
+                            if best_version_obj and int(v.version) > int(best_version_obj.version):
+                                best_version_obj = v
+                                best_model_name = registered_name
                 except Exception as e:
                     print(f"⚠️ Could not read metrics for {registered_name} v{v.version}: {e}")
                     continue
 
         if not best_version_obj:
-            print("❌ No valid models found in registry.")
+            print("❌ No NeuralNetwork found")
             return None, "No Model"
 
         # Load the winner
-        print(f"🏆 Best Model Found: {best_model_name} v{best_version_obj.version} (MAE: {best_mae:.2f})")
+        print(f"🏆 Selected Model: {best_model_name} v{best_version_obj.version} (MAE: {best_mae:.2f})")
         model_uri = f"models:/{best_model_name}/{best_version_obj.version}"
         
         LOADED_MODEL = mlflow.pyfunc.load_model(model_uri)
