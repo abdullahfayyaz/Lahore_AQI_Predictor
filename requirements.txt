@@ -6,7 +6,6 @@ mlflow_skinny==3.9.0
 mlflow_tracing==3.9.0
 numpy==2.4.2
 pandas==3.0.0
-plotly==6.5.0
 plotly==6.5.2
 pymongo==4.16.0
 python-dotenv==1.2.1
