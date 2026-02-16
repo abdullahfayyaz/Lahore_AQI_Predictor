@@ -1,4 +1,3 @@
-certifi==2025.10.5
 certifi==2026.1.4
 dagshub==0.6.5
 fastapi==0.129.0
