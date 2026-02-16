@@ -8,6 +8,7 @@ import mlflow.pyfunc
 from datetime import datetime
 from dotenv import load_dotenv
 import dagshub
+from alerts.notification import check_and_alert
 
 # -------------------------------
 # 1️⃣ CONFIGURATION
@@ -260,6 +261,14 @@ def make_prediction():
             "humidity": int(f['humidity']),
             "desc": desc
         })
+
+    # --- ALERT CHECK 
+    if predictions:
+        # Get the first dictionary (Today's forecast) from the list
+        today_forecast = predictions[0] 
+        
+        # 🚨 RUN THE CHECK (Pass the whole dictionary)
+        check_and_alert(today_forecast)
 
     return {
         "forecast": predictions,
