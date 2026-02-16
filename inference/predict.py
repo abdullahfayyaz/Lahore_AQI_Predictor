@@ -88,7 +88,7 @@ def load_model_globally():
                     mae = float(run.data.metrics.get("mae", float("inf")))
                     
                     # 2. FILTER: Only accept if MAE is between 15.50 and 15.55
-                    if 15.50 <= mae <= 15.55:
+                    if 12.80 <= mae <= 13.00:
                         print(f"   🔎 Found candidate: v{v.version} with MAE {mae}")
                         
                         # Logic: Find the best one *within this specific range*
