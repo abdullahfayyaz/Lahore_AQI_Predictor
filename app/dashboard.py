@@ -279,7 +279,7 @@ with tab_about:
     This AI-powered dashboard predicts Air Quality in Lahore using advanced machine learning.
     
     **Tech Stack:**
-    - **Model:** XGBoost (Regression)
+    - **Models:** RidgeRegression, RandomForestRegressor, XGBRegressor, NeuralNetwork
     - **Tracking:** MLflow & DagsHub
     - **Backend:** FastAPI
     - **Frontend:** Streamlit
