@@ -264,8 +264,56 @@ with tab_analysis:
         # 3. Trend Over Time
         st.divider()
         st.subheader("📈 Long-Term Trend")
-        fig_trend = px.line(df, x="date", y="aqi", title="AQI History Over Time", markers=True)
-        st.plotly_chart(fig_trend, use_container_width=True)
+
+        # 1. Filter Data 
+        df['date'] = pd.to_datetime(df['date'])
+        mask = (df['date'] >= "2025-08-01") & (df['date'] <= "2026-01-31")
+        filtered_df = df.loc[mask].copy()
+        
+        if not filtered_df.empty:
+            # 2. ALWAYS Apply Smoothing (24h Average)
+            # Set index to date for resampling
+            filtered_df = filtered_df.set_index('date')
+            
+            # Resample to hourly to ensure continuity (ignoring non-numeric cols like _id)
+            filtered_df = filtered_df.resample('h').mean(numeric_only=True).interpolate()
+            
+            # Calculate rolling average
+            filtered_df['aqi'] = filtered_df['aqi'].rolling(window=24, min_periods=1).mean()
+            
+            # Reset index so 'date' becomes a column again for Plotly
+            filtered_df = filtered_df.reset_index()
+
+            # 3. Create the Clean Chart
+            fig_trend = px.line(
+                filtered_df, 
+                x="date", 
+                y="aqi", 
+                title="AQI Trend Analysis",
+                color_discrete_sequence=["#FF4B4B"], 
+                labels={"aqi": "AQI Level", "date": "Date"}
+            )
+            
+            # 4. Polish the Layout
+            fig_trend.update_layout(
+                xaxis_title=None, 
+                yaxis_title="AQI (24h Avg)",
+                hovermode="x unified",
+                height=400,
+                xaxis=dict(
+                    rangeslider=dict(visible=True), 
+                    type="date"
+                )
+            )
+            
+            # Clean gridlines
+            fig_trend.update_xaxes(showgrid=False)
+            fig_trend.update_yaxes(showgrid=True, gridcolor='lightgray')
+
+            st.plotly_chart(fig_trend, use_container_width=True)
+            
+        else:
+            st.info("ℹ️ No data available for the period Aug 2025 - Jan 2026.")
         
     else:
         st.warning("No historical data found in MongoDB. Run your data pipeline to populate analytics.")
