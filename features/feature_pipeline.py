@@ -14,7 +14,6 @@ load_dotenv()
 # --- CONFIGURATION ---
 MONGO_URI = os.getenv('MONGO_URI')
 OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY')
-PROJECT_NAME = os.getenv('PROJECT_NAME')
 
 # Coordinates (Lahore)
 CITY_LAT = 31.5497
