@@ -46,6 +46,8 @@ Isolate your project dependencies to avoid conflicts.
 Windows: 
 ```bash
 python -m venv venv
+or
+py -m venv venv
 ```
 Mac/Linux: 
 ```bash
